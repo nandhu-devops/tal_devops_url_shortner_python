@@ -22,7 +22,7 @@ jobs:
 
       - name: Authenticate with AWS ECR
         run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 484907521368.dkr.ecr.us-east-1.amazonaws.com
 
       - name: Apply PostgreSQL Deployment
         run: |
