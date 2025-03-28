@@ -1,99 +1,166 @@
-# URL Shortener Service
+URL-Shortener service  
 
-A modern URL shortening service built with Python FastAPI backend and simple HTML/JavaScript frontend. This application demonstrates modern web development practices and serves as a platform for DevOps implementation exercises.
+Objective 
 
-## Application Components
+The objective of this project was to design and implement a scalable, reliable URL shortening service similar to TinyURL or Bitly. The service aims to: 
 
-### Backend (FastAPI)
-- RESTful API for URL shortening
-- PostgreSQL database integration
-- Rate limiting
-- URL validation
-- Analytics tracking
+    Convert long URLs into short, unique aliases. 
 
-### Frontend
-- Simple and responsive design
-- URL submission form
-- QR code generation for shortened URLs
-- Basic analytics display
+    Redirect users to the original URL when the short alias is accessed. 
 
-### Features
-- URL shortening with custom alias support
-- QR code generation
-- Click tracking and analytics
-- Rate limiting
-- API documentation (Swagger/OpenAPI)
+    Handle high traffic efficiently using a cloud-native infrastructure. 
 
-## Technical Stack
-- Backend: Python FastAPI
-- Database: PostgreSQL
-- Frontend: HTML, JavaScript, Bootstrap
-- API Documentation: OpenAPI/Swagger
-- Container: Docker
-- Orchestration: Kubernetes
-- Database Migration: Alembic
+    Automate deployment and management using CI/CD pipelines and Kubernetes on AWS EKS. 
 
-## Local Development Setup
-1. Backend:
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   uvicorn main:app --reload
-   ```
+The system was built to ensure high availability, low latency, and scalability to support millions of URL shortening requests and redirections daily. 
 
-2. Frontend:
-   ```bash
-   cd frontend
-   python -m http.server 8080
-   ```
+ 
 
-## API Endpoints
-- POST /api/shorten - Create short URL
-- GET /{short_id} - Redirect to original URL
-- GET /api/stats/{short_id} - Get URL statistics
-- GET /api/health - Health check endpoint
+Tools & Technologies Used 
 
-## Database Schema
-```sql
-CREATE TABLE urls (
-    id SERIAL PRIMARY KEY,
-    original_url TEXT NOT NULL,
-    short_id VARCHAR(10) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP,
-    custom_alias VARCHAR(50) UNIQUE
-);
+    Infrastructure:  
 
-CREATE TABLE clicks (
-    id SERIAL PRIMARY KEY,
-    url_id INTEGER REFERENCES urls(id),
-    clicked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    referrer TEXT,
-    user_agent TEXT
-);
-```
+    AWS EKS (Elastic Kubernetes Service): For container orchestration and cluster management. 
+
+    Terraform: To provision and manage the EKS cluster and related AWS resources. 
+
+    AWS ECR (Elastic Container Registry): To store Docker images for the application components. 
+
+    CI/CD:  
+
+    GitHub Actions: For automating the build, test, and deployment pipeline. 
+
+    kubectl: To interact with the Kubernetes cluster and deploy manifests. 
+
+    Application:  
+
+    Backend: Python (or any preferred backend framework) for URL shortening logic and API endpoints. 
+
+    Frontend: Python (or similar) for a simple user interface to input URLs and receive shortened links. 
+
+    Database: PostgreSQL for persistent storage of URL mappings. 
+
+    Docker: To containerize the backend, frontend, and database services. 
+
+    Other Tools:  
+
+    Git: For version control. 
+
+    Nginx: As a reverse proxy/load balancer within the cluster. 
+
+ 
+
+Architecture Overview 
+
+The URL shortening service follows a microservices architecture deployed on an AWS EKS cluster: 
 
 
-### Minimum Tasks (Infra Creation)
-- Provision infrastructure either on self managed K8s / EKS using terraform 
-- Set up a simple GitHub Actions or Jenkins pipeline to run Terraform commands (terraform fmt, validate, and plan).
-- Automate Terraform execution with a pipeline trigger on push to a specific branch.
-- Create Dockerfiles 
-- Set up multi-stage builds
-- Configure environment variables
-- Set up health check endpoints
-- Configure basic logging
 
-### Target Tasks (Deployment)
-- Refactor the Terraform code to use modules for reusability.
-- Store Terraform state in an S3 bucket with DynamoDB for state locking.
-- Write Deployment.yaml and service.yaml files for deployment on k8s.
-- Use helm for deplyment using gitops
-- Handle environment variables using k8s secrets
+ +-------------------+       +-------------------+
+|    Client (UI/API)| ----> | Load Balancer (ALB/Ingress) |
++-------------------+       +-------------------+
+                              |
+                              v
++-------------------+       +-------------------+
+|  Shortener Service| <-->  |   PostgreSQL DB   |
+| (Backend Pods)    |       | (Persistent Store)|
++-------------------+       +-------------------+
+         |
+         v
++-------------------+
+|  Kubernetes (EKS) |
++-------------------+
+         |
+         v
++-------------------+
+| Monitoring (Prometheus/Grafana) |
++-------------------+
 
-### Stretch 
-- Setup Argo CD for automatic deplyoment 
-- Setup Promethues and grafana 
-- setup basic alerts
+    Client Layer: Users interact with the system via a web interface or API calls. 
+
+    Load Balancer: An Nginx ingress controller distributes traffic across backend pods. 
+
+    Backend Service: Handles URL shortening logic, generates unique aliases (e.g., using base62 encoding of an incremental ID), and stores mappings in the database. 
+
+    Frontend Service: Provides a simple UI for users to input long URLs and retrieve shortened ones. 
+
+    Database: PostgreSQL stores the mapping between short aliases and original URLs in a key-value structure. 
+
+    EKS Cluster: Managed by Terraform, it hosts all services in Kubernetes pods, with auto-scaling enabled based on traffic load. 
+
+The system is designed for horizontal scalability, with each component running in isolated pods that can scale independently. Data consistency is maintained through PostgreSQL, while Kubernetes ensures fault tolerance and high availability. 
+
+ 
+
+Implementation Steps 
+
+    Infrastructure Setup:  
+
+    Created a Terraform configuration to define an EKS cluster with a managed node group (e.g., t3.medium instances). 
+
+    Configured VPC, subnets, and security groups for network isolation and access control. 
+
+    Applied Terraform scripts to provision the cluster (terraform apply). 
+
+    Application Development:  
+
+    Developed a backend service with two main endpoints:  
+
+    POST /shorten: Takes a long URL and returns a short alias. 
+
+    GET /{shortAlias}: Redirects to the original URL. 
+
+    Built a minimal frontend with a form to submit URLs and display results. 
+
+    Set up PostgreSQL with a table (urls) containing columns: id (auto-increment), short_alias, and original_url. 
+
+    Containerization:  
+
+    Created Dockerfiles for backend and frontend services. 
+
+    Built and pushed images to AWS ECR. 
+
+    Kubernetes Deployment:  
+
+    Wrote Kubernetes manifests (deployments, services, ingress) for each component. 
+
+    CI/CD Pipeline:  
+
+    Set up a GitHub Actions workflow to:  
+
+    Build and test the application on each push/PR. 
+
+    Deploy services to EKS using kubectl. 
+
+    Added verification steps to check pod status and service availability. 
+
+    Testing and Validation:  
+
+    Tested the service locally using Docker Compose. 
+
+    Validated end-to-end functionality on EKS after deployment. 
+
+
+ 
+
+ 
+
+Conclusion & Learnings 
+
+The URL shortening service was successfully implemented and deployed on an AWS EKS cluster and CI/CD pipeline via GitHub Actions is in-progress. The system meets its objectives of scalability, reliability, and ease of use, capable of handling moderate traffic with room for further optimization. 
+
+Key Learnings: 
+
+    Infrastructure as Code (IaC): Terraform simplified cluster management and made infrastructure reproducible. 
+
+    Kubernetes Power: EKS provided robust orchestration, auto-scaling, and fault tolerance out of the box. 
+
+    CI/CD Automation: GitHub Actions streamlined the deployment process, reducing manual errors and deployment time. 
+
+    Scalability Considerations: Early planning for database scalability (e.g., replication) is critical for high-traffic services. 
+
+    Monitoring Needs(Not inplemented): Future iterations should include observability tools (e.g., Prometheus, Grafana) to monitor performance and detect issues proactively. 
+
+This project demonstrated the power of combining modern DevOps practices with cloud-native technologies to build a production-ready service. Future enhancements could include custom alias support, analytics tracking, and rate limiting to prevent abuse. 
+
+ 
