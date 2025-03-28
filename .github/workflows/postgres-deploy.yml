@@ -6,25 +6,50 @@ on:
       - 'k8s/postgres-deployment.yaml'
   workflow_dispatch:
 
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 484907521368.dkr.ecr.us-east-1.amazonaws.com
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     steps:
+      # Checkout code first
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Configure AWS credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      # Install kubectl
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'  # Use a stable version compatible with your EKS cluster
 
+      # Authenticate with AWS ECR (optional, remove if not needed)
       - name: Authenticate with AWS ECR
+        if: contains(fromJson('["true"]'), env.USE_CUSTOM_POSTGRES_IMAGE)  # Conditional execution
+        env:
+          USE_CUSTOM_POSTGRES_IMAGE: "false"  # Set to "true" if using a custom image in ECR
         run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 484907521368.dkr.ecr.us-east-1.amazonaws.com
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
 
+      # Deploy PostgreSQL to EKS
       - name: Apply PostgreSQL Deployment
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region us-east-1
-          kubectl apply -f k8s/postgres-deployment.yaml
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || { echo "Failed to update kubeconfig"; exit 1; }
+          kubectl apply -f k8s/postgres-deployment.yaml || { echo "Failed to apply deployment"; exit 1; }
+          kubectl rollout status deployment/postgres --timeout=5m  # Wait for deployment to be ready
+
+      # Verify deployment
+      - name: Verify Deployment
+        run: |
+          kubectl get pods -l app=postgres
+          kubectl get svc -l app=postgres
