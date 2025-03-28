@@ -1,0 +1,30 @@
+name: Deploy Backend
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'k8s/backend-deployment.yaml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate with AWS ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+
+      - name: Build & Push Backend Image
+        run: |
+          docker build -t ${{ secrets.ECR_REPOSITORY }}/url-shortener-backend:latest ./backend
+          docker push ${{ secrets.ECR_REPOSITORY }}/url-shortener-backend:latest
+
+      - name: Apply Backend Deployment
+        run: |
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region us-east-1
+          kubectl apply -f k8s/secret.yaml
+          kubectl apply -f k8s/backend-deployment.yaml

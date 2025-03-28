@@ -1,3 +1,4 @@
+from fastapi.responses import RedirectResponse
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -18,6 +19,10 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="URL Shortener API")
 
 # CORS middleware
+#origins = [
+#    "http://13.233.149.220:30001", #Here configured - worker node IP/ALB DNS and nodeport of frontend service
+#]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -74,7 +79,7 @@ def create_short_url(url_request: schemas.URLBase, db: Session = Depends(get_db)
     db.refresh(db_url)
 
     # Generate QR code
-    qr_code = generate_qr_code(f"http://localhost:8000/{short_id}")
+    qr_code = generate_qr_code(f"http://backend:8000/{short_id}")
 
     return {
         "target_url": url_request.target_url,

@@ -56,8 +56,8 @@
         </div>
     </div>
 
-    <script>
-        const API_URL = 'http://localhost:8000';
+    <script> 
+        const API_URL = 'http://k8s-default-backend-2bdc1c3070-d7223c7ced1e0bc6.elb.us-east-1.amazonaws.com:8000';  // Here configured - worker node IP and nodeport of backend service
         let currentShortId = '';
 
         document.getElementById('urlForm').addEventListener('submit', async (e) => {

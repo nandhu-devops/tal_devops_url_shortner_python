@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              value: "postgres"
+            - name: POSTGRES_DB
+              value: "urlshortener"
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"  # Make it public
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: postgres
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 5432        # External port (Load Balancer)
+      targetPort: 5432 # The port your Postgres_db is listening on inside the container
